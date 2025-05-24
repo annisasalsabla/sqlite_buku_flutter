@@ -2,122 +2,74 @@ import 'package:flutter/material.dart';
 import 'package:sqlite_buku_flutter/helper/db_helper.dart';
 import 'package:sqlite_buku_flutter/model/model_buku.dart';
 import 'package:sqlite_buku_flutter/uiscreen/addbuku_view.dart';
-import 'package:sqlite_buku_flutter/uiscreen/editbuku_view.dart';
 
-class ListDataBukuView extends StatefulWidget {
-  const ListDataBukuView({super.key});
+class ListdatabukuView extends StatefulWidget {
+  const ListdatabukuView({super.key});
 
   @override
-  State<ListDataBukuView> createState() => _ListDataBukuViewState();
+  State<ListdatabukuView> createState() => _ListdatabukuViewState();
 }
 
-class _ListDataBukuViewState extends State<ListDataBukuView> {
-  List<ModelBuku> _listBuku = [];
-  bool _isLoading = true;
+class _ListdatabukuViewState extends State<ListdatabukuView> {
+  List<ModelBuku> _buku = [];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      await _insertDummyIfNeeded();
-      await _fetchDataBuku();
-    } catch (e) {
-      debugPrint('❌ Error saat load data: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _insertDummyIfNeeded() async {
-    final existingData = await DatabaseHelper.instance.queryAllBuku();
-    if (existingData.isEmpty) {
-      debugPrint('📥 Data kosong. Menambahkan dummy...');
-      await DatabaseHelper.instance.initializeDataBuku();
-    } else {
-      debugPrint('✅ Data sudah ada. Tidak menambahkan dummy.');
-    }
+    DatabaseHelper.instance.dummyBuku();
+    _fetchDataBuku();
   }
 
   Future<void> _fetchDataBuku() async {
-    final data = await DatabaseHelper.instance.queryAllBuku();
+    final bukuMaps = await DatabaseHelper.instance.quaryAllBuku();
     setState(() {
-      _listBuku = data.map((e) => ModelBuku.fromMap(e)).toList();
+      _buku = bukuMaps.map((bukuMaps) => ModelBuku.fromMap(bukuMaps)).toList();
     });
   }
 
-  Future<void> _showOptionsDialog(ModelBuku buku) async {
-    showModalBottomSheet(
+  void _deleteDialog(int id, int index) {
+    showDialog(
       context: context,
-      builder: (context) => Wrap(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.edit, color: Colors.indigo),
-            title: const Text('Edit'),
-            onTap: () async {
-              Navigator.pop(context); // Tutup bottom sheet
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => EditBukuView(buku: buku)),
-              );
-              if (result == true) {
-                await _fetchDataBuku();
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Center(
+            child: Text(
+              "Are You Sure to Delete",
+              style: TextStyle(
+                color: Colors.teal,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text("Delete"),
+              onPressed: () async {
+                await DatabaseHelper.instance.deleteUser(_buku[index].id!);
+                Navigator.pop(context);
+                _fetchDataBuku();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('✅ Data berhasil diperbarui'),
-                    backgroundColor: Colors.green[600],
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
+                    content: Text("User Detail Deleted Success"),
+                    backgroundColor: Colors.black87,
+                    duration: Duration(seconds: 2),
                   ),
                 );
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text('Hapus'),
-            onTap: () async {
-              Navigator.pop(context); // Tutup bottom sheet
-              final confirm = await _showDeleteConfirmationDialog(buku.judulbuku);
-              if (confirm == true) {
-                await DatabaseHelper.instance.deleteUser(buku.id!);
-                await _fetchDataBuku();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('🗑️ Data berhasil dihapus'),
-                    backgroundColor: Colors.red[600],
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<bool?> _showDeleteConfirmationDialog(String judulBuku) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: Text('Yakin ingin menghapus buku "$judulBuku"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+              child: Text("Close"),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -125,48 +77,37 @@ class _ListDataBukuViewState extends State<ListDataBukuView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('List Data Buku'),
+        title: Text('List Data Buku'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _fetchDataBuku,
+          )
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _listBuku.isEmpty
-          ? const Center(child: Text('Data buku tidak tersedia.'))
+      body: _buku.isEmpty
+          ? Center(child: Text("Belum ada data buku."))
           : ListView.builder(
-        itemCount: _listBuku.length,
+        itemCount: _buku.length,
         itemBuilder: (context, index) {
-          final buku = _listBuku[index];
-          return ListTile(
-            leading: CircleAvatar(
-              child: Text(buku.id?.toString() ?? '?'),
+          return GestureDetector(
+            onLongPress: () {
+              _deleteDialog(_buku[index].id!, index);
+            },
+            child: ListTile(
+              title: Text(_buku[index].judulbuku),
+              subtitle: Text(_buku[index].kategori),
             ),
-            title: Text(buku.judulbuku),
-            subtitle: Text(buku.kategori),
-            onTap: () {},
-            onLongPress: () => _showOptionsDialog(buku),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddbukuView()),
-          );
-
-          if (result == true) {
-            await _fetchDataBuku();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('📚 Data berhasil ditambahkan'),
-                backgroundColor: Colors.blue[600],
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
+          await Navigator.push(
+              context, MaterialPageRoute(builder: (context) => const AddbukuView()));
+          _fetchDataBuku(); // Refresh setelah tambah
         },
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add),
+        child: Icon(Icons.add),
       ),
     );
   }

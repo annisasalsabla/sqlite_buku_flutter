@@ -10,127 +10,110 @@ class AddbukuView extends StatefulWidget {
 }
 
 class _AddbukuViewState extends State<AddbukuView> {
-  final _judulBukuController = TextEditingController();
-  final _kategoriBukuController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  var _judulBukuController = TextEditingController();
+  var _kategoriBukuController = TextEditingController();
 
-  Future<void> _simpanData() async {
-    if (_formKey.currentState!.validate()) {
-      final newBuku = ModelBuku(
-        judulbuku: _judulBukuController.text.trim(),
-        kategori: _kategoriBukuController.text.trim(),
+  bool _validateJudul = false;
+  bool _validateKategori = false;
+
+  void _saveDetails() async {
+    setState(() {
+      _validateJudul = _judulBukuController.text.isEmpty;
+      _validateKategori = _kategoriBukuController.text.isEmpty;
+    });
+
+    if (!_validateJudul && !_validateKategori) {
+      ModelBuku buku = ModelBuku(
+        judulbuku: _judulBukuController.text,
+        kategori: _kategoriBukuController.text,
       );
 
-      await DatabaseHelper.instance.insertBuku(newBuku);
+      await DatabaseHelper.instance.insertBuku(buku);
 
-      // Kirim sinyal sukses ke halaman sebelumnya
-      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Data buku berhasil disimpan!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      Navigator.pop(context); // Balik ke halaman list dan auto-refresh
     }
+  }
+
+  void _clearDetails() {
+    setState(() {
+      _judulBukuController.clear();
+      _kategoriBukuController.clear();
+      _validateJudul = false;
+      _validateKategori = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryPurple = const Color(0xFF7F5AF0); // Ungu utama
-    final Color lightPurple = const Color(0xFFF5EDFF);   // Latar ungu muda
-
     return Scaffold(
-      backgroundColor: lightPurple,
       appBar: AppBar(
-        title: const Text('Tambah Buku'),
-        backgroundColor: lightPurple,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        title: Text('Add Data Buku'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Card(
-          color: Colors.white,
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add New Buku',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.teal,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: _judulBukuController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Masukkan Judul Buku',
+                  labelText: 'Judul Buku',
+                  errorText: _validateJudul ? 'Judul tidak boleh kosong' : null,
+                ),
+              ),
+              SizedBox(height: 20),
+              TextField(
+                controller: _kategoriBukuController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Masukkan Kategori Buku',
+                  labelText: 'Kategori Buku',
+                  errorText: _validateKategori ? 'Kategori tidak boleh kosong' : null,
+                ),
+              ),
+              SizedBox(height: 20),
+              Row(
                 children: [
-                  Text(
-                    'Form Tambah Data Buku',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: primaryPurple,
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
                     ),
+                    onPressed: _saveDetails,
+                    child: Text('Save Details'),
                   ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _judulBukuController,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      labelText: 'Judul Buku',
-                      labelStyle: TextStyle(color: primaryPurple),
-                      prefixIcon: Icon(Icons.book, color: primaryPurple),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: primaryPurple.withOpacity(0.6)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: primaryPurple),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  SizedBox(width: 10),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Judul buku wajib diisi';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _kategoriBukuController,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      labelText: 'Kategori',
-                      labelStyle: TextStyle(color: primaryPurple),
-                      prefixIcon: Icon(Icons.category, color: primaryPurple),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: primaryPurple.withOpacity(0.6)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: primaryPurple),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Kategori wajib diisi';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.save, color: Colors.white),
-                      label: const Text(
-                        'SIMPAN',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryPurple,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _simpanData,
-                    ),
+                    onPressed: _clearDetails,
+                    child: Text('Clear Details'),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
