@@ -1,7 +1,9 @@
+// listdatabuku_view.dart
 import 'package:flutter/material.dart';
 import 'package:sqlite_buku_flutter/helper/db_helper.dart';
 import 'package:sqlite_buku_flutter/model/model_buku.dart';
 import 'package:sqlite_buku_flutter/uiscreen/addbuku_view.dart';
+import 'package:sqlite_buku_flutter/uiscreen/editbuku_view.dart';
 
 class ListdatabukuView extends StatefulWidget {
   const ListdatabukuView({super.key});
@@ -97,6 +99,23 @@ class _ListdatabukuViewState extends State<ListdatabukuView> {
             child: ListTile(
               title: Text(_buku[index].judulbuku),
               subtitle: Text(_buku[index].kategori),
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditbukuView(buku: _buku[index]),
+                  ),
+                );
+                if (result == true) {
+                  _fetchDataBuku();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Berhasil update"),
+                      backgroundColor: Colors.teal,
+                    ),
+                  );
+                }
+              },
             ),
           );
         },
